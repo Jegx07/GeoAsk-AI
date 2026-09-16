@@ -35,6 +35,11 @@ async def analyze_endpoint(
     files: list[UploadFile] = File(...),
 ) -> AnalysisResponse:
     """Submit a query and images for analysis."""
+    query = query.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="A non-empty query is required.")
+    if len(query) > 2000:
+        raise HTTPException(status_code=400, detail="Query must be 2,000 characters or fewer.")
     if not files:
         raise HTTPException(status_code=400, detail="At least one image file is required.")
 
@@ -45,11 +50,20 @@ async def analyze_endpoint(
     saved_paths = []
     try:
         for file in files:
-            file_path = settings.upload_path / f"{session_id}_{file.filename}"
+            original_name = Path(file.filename or "upload").name
+            suffix = Path(original_name).suffix.lower()
+            file_path = settings.upload_path / f"{session_id}_{uuid.uuid4().hex[:8]}{suffix}"
             with open(file_path, "wb") as buffer:
-                content = await file.read()
+                content = await file.read(settings.max_upload_bytes + 1)
+                if len(content) > settings.max_upload_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File too large. Max: {settings.max_upload_size_mb} MB.",
+                    )
                 buffer.write(content)
-            saved_paths.append((str(file_path), file.filename))
+            saved_paths.append((str(file_path), original_name))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Failed to save uploaded files: %s", e)
         raise HTTPException(status_code=500, detail="Failed to save uploaded files.")

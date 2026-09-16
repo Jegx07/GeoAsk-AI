@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from xml.sax.saxutils import escape
 
 from app.config import get_settings
 from app.models.enums import AnalysisStatus, InputMode, TaskType
@@ -148,12 +149,12 @@ class ResponseEngine:
         
         # Query
         Story.append(Paragraph(f"<b>User Query:</b>", styles["Heading2"]))
-        Story.append(Paragraph(query, styles["Normal"]))
+        Story.append(Paragraph(escape(query), styles["Normal"]))
         Story.append(Spacer(1, 15))
         
         # Answer
         Story.append(Paragraph(f"<b>Analysis Output:</b>", styles["Heading2"]))
-        Story.append(Paragraph(answer.replace('\n', '<br/>'), styles["Normal"]))
+        Story.append(Paragraph(escape(answer).replace('\n', '<br/>'), styles["Normal"]))
         Story.append(Spacer(1, 15))
         
         # Confidence & Metrics

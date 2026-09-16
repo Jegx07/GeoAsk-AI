@@ -13,6 +13,7 @@ from pathlib import Path
 from app.core.agent import GeoAskAgent
 from app.models.schemas import AnalysisRequest, ImageInput
 from app.models.enums import InputMode
+from benchmarks.metrics import summarize_results, token_f1
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class BenchmarkRunner:
                     "query": sample['query'],
                     "ground_truth": sample['ground_truth'],
                     "prediction": res.answer,
+                    "token_f1": token_f1(res.answer, sample["ground_truth"]),
                     "confidence": res.confidence.overall,
                     "processing_time": res.processing_time_seconds,
                     "status": "success"
@@ -70,11 +72,12 @@ class BenchmarkRunner:
                 
         # Save results
         out_path = self.results_dir / f"{name}_results.json"
+        summary = summarize_results(results)
         with open(out_path, "w") as f:
-            json.dump(results, f, indent=2)
+            json.dump({"summary": summary, "results": results}, f, indent=2)
             
         logger.info(f"Benchmark complete. Results saved to {out_path}")
-        return results
+        return {"summary": summary, "results": results}
 
 if __name__ == "__main__":
     # Example usage script

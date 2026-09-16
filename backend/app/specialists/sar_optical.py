@@ -8,6 +8,7 @@ over the combined representation.
 from __future__ import annotations
 
 import logging
+import asyncio
 import uuid
 
 import numpy as np
@@ -214,7 +215,10 @@ class SAROpticalSpecialist(BaseSpecialist):
                 "5. **Practical Significance**: Why is this multi-modal view useful?\n"
             )
 
-            response = model.generate_content([prompt, opt_pil, sar_pil])
+            response = await asyncio.wait_for(
+                asyncio.to_thread(model.generate_content, [prompt, opt_pil, sar_pil]),
+                timeout=60,
+            )
             return response.text.strip()
 
         except Exception as exc:
@@ -261,7 +265,10 @@ class SAROpticalSpecialist(BaseSpecialist):
                 "3. Any notable structures or anomalies\n"
             )
 
-            response = model.generate_content([prompt, pil_img])
+            response = await asyncio.wait_for(
+                asyncio.to_thread(model.generate_content, [prompt, pil_img]),
+                timeout=45,
+            )
             return SpecialistResult(
                 specialist_name="sar_optical_specialist",
                 task_type=TaskType.SAR_ANALYSIS,

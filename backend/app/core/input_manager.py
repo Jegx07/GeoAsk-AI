@@ -65,9 +65,15 @@ class InputManager:
         # --- Format detection ---
         fmt_str = detect_image_format(filepath)
         fmt = _str_to_format(fmt_str)
+        if fmt is ImageFormat.UNKNOWN:
+            raise ValueError(
+                "Unsupported image format. Upload a GeoTIFF, TIFF, PNG, or JPEG file."
+            )
 
         # --- Dimensions & bands ---
         width, height = get_image_dimensions(filepath)
+        if width <= 0 or height <= 0:
+            raise ValueError("Image dimensions must be greater than zero.")
         band_count = get_raster_band_count(filepath)
 
         # --- Geo metadata ---

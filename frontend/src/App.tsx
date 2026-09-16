@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Send, Upload, Earth, Download } from 'lucide-react'
+import { Send, Upload, Earth, Download, Activity, AlertCircle } from 'lucide-react'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
@@ -9,10 +9,18 @@ export default function App() {
   const [files, setFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [error, setError] = useState('')
+  const [dragging, setDragging] = useState(false)
+
+  const acceptFiles = (nextFiles: File[]) => {
+    const supported = nextFiles.filter(file => /\.(tif|tiff|png|jpe?g)$/i.test(file.name))
+    setFiles(supported)
+    setError(supported.length === nextFiles.length ? '' : 'Unsupported file skipped. Use GeoTIFF, TIFF, PNG, or JPEG.')
+  }
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files))
+      acceptFiles(Array.from(e.target.files))
     }
   }
 
@@ -21,6 +29,7 @@ export default function App() {
     if (!query || files.length === 0) return
     
     setLoading(true)
+    setError('')
     const formData = new FormData()
     formData.append('query', query)
     files.forEach(f => formData.append('files', f))
@@ -31,10 +40,12 @@ export default function App() {
         body: formData,
       })
       const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'Analysis request failed')
       setResult(data)
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to connect to backend'
       console.error(err)
-      alert("Failed to connect to backend")
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -61,17 +72,24 @@ export default function App() {
               {/* File Upload */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Upload Satellite Imagery</label>
-                <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-muted/20">
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-muted/20 ${dragging ? 'border-primary' : ''}`}
+                  onDragOver={e => { e.preventDefault(); setDragging(true) }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={e => { e.preventDefault(); setDragging(false); acceptFiles(Array.from(e.dataTransfer.files)) }}
+                >
                   <Upload className="w-8 h-8 text-muted-foreground mb-4" />
-                  <Input type="file" multiple onChange={handleFileChange} className="hidden" id="file-upload" />
+                  <Input type="file" accept=".tif,.tiff,.png,.jpg,.jpeg,image/tiff,image/png,image/jpeg" multiple onChange={handleFileChange} className="hidden" id="file-upload" />
                   <label htmlFor="file-upload" className="cursor-pointer text-sm text-primary hover:underline">
                     Browse files
                   </label>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {files.length > 0 ? `${files.length} file(s) selected` : "Supports GeoTIFF, PNG, JPEG"}
+                    {files.length > 0 ? files.map(file => file.name).join(', ') : "Drop GeoTIFF, PNG, or JPEG files here"}
                   </p>
                 </div>
               </div>
+
+              {error && <p className="flex items-center gap-2 text-sm text-destructive"><AlertCircle className="h-4 w-4" />{error}</p>}
 
               {/* Query Input */}
               <div className="space-y-2">
@@ -149,6 +167,21 @@ export default function App() {
                       <Download className="w-4 h-4 mr-2" /> Download Full Report
                     </a>
                   </Button>
+                )}
+
+                {result.execution_trace?.events?.length > 0 && (
+                  <details className="border rounded-md p-3">
+                    <summary className="cursor-pointer flex items-center gap-2 text-sm font-medium">
+                      <Activity className="h-4 w-4" /> Execution trace ({result.execution_trace.events.length} events)
+                    </summary>
+                    <ol className="mt-3 space-y-2 border-l pl-4 text-xs text-muted-foreground">
+                      {result.execution_trace.events.map((event: { event_type: string; message: string; timestamp: string }, i: number) => (
+                        <li key={`${event.timestamp}-${i}`}>
+                          <span className="font-medium text-foreground">{event.event_type}</span>: {event.message}
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
                 )}
                 
               </div>

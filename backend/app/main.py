@@ -42,8 +42,9 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api", tags=["Analysis"])
 app.include_router(ws_router, tags=["WebSocket"])
 
-# Mount static directories for serving output images/thumbnails
-app.mount("/static/uploads", StaticFiles(directory=str(settings.upload_path)), name="uploads")
+# Mount generated evidence under the API namespace so the Vite proxy and
+# production reverse proxy expose the same URL.
+app.mount("/api/static/uploads", StaticFiles(directory=str(settings.upload_path)), name="uploads")
 
 
 @app.on_event("startup")

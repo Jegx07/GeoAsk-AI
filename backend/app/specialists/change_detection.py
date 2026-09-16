@@ -11,6 +11,7 @@ change mask and images to Gemini Vision for natural-language description.
 from __future__ import annotations
 
 import logging
+import asyncio
 import os
 import uuid
 from pathlib import Path
@@ -269,7 +270,10 @@ class ChangeDetectionSpecialist(BaseSpecialist):
                 "4. Potential causes or significance of the changes\n"
             )
 
-            response = model.generate_content([prompt, pil_t1, pil_t2])
+            response = await asyncio.wait_for(
+                asyncio.to_thread(model.generate_content, [prompt, pil_t1, pil_t2]),
+                timeout=60,
+            )
             return response.text.strip()
 
         except Exception as exc:

@@ -7,6 +7,7 @@ remote-sensing imagery using Gemini Vision.
 from __future__ import annotations
 
 import logging
+import asyncio
 
 from app.config import get_settings
 from app.models.enums import TaskType
@@ -148,5 +149,8 @@ class CaptioningSpecialist(BaseSpecialist):
         pil_img = image_to_pil(image_input.filepath)
         prompt = _RS_BRIEF_CAPTION_PROMPT if brief else _RS_CAPTIONING_PROMPT
 
-        response = model.generate_content([prompt, pil_img])
+        response = await asyncio.wait_for(
+            asyncio.to_thread(model.generate_content, [prompt, pil_img]),
+            timeout=45,
+        )
         return response.text.strip()

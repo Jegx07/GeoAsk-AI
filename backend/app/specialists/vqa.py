@@ -7,6 +7,7 @@ Uses Google Gemini Vision API with remote-sensing-adapted prompting.
 from __future__ import annotations
 
 import logging
+import asyncio
 from pathlib import Path
 
 from app.config import get_settings
@@ -146,5 +147,8 @@ class VQASpecialist(BaseSpecialist):
         # Build prompt
         prompt = f"{_RS_VQA_SYSTEM_PROMPT}\n\nUser question: {query}"
 
-        response = model.generate_content([prompt, pil_img])
+        response = await asyncio.wait_for(
+            asyncio.to_thread(model.generate_content, [prompt, pil_img]),
+            timeout=45,
+        )
         return response.text.strip()

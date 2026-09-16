@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import asyncio
 from typing import Optional
 
 from app.config import get_settings
@@ -107,7 +108,10 @@ class QueryUnderstanding:
             f"Respond with JSON only."
         )
 
-        response = model.generate_content(prompt)
+        response = await asyncio.wait_for(
+            asyncio.to_thread(model.generate_content, prompt),
+            timeout=30,
+        )
         text = response.text.strip()
 
         # Extract JSON from response (handle markdown code blocks)
